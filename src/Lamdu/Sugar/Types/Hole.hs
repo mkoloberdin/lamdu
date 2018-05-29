@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Types.Hole
-    ( HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
+    ( ValNames(..), valNamesGlobalDefs, valNamesParams, valNamesNominals, valNamesTags
+    , HoleOption(..), hoVal, hoValNames, hoSugaredBaseExpr, hoResults
     , HoleOption'
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , OptionLiteral
@@ -30,14 +31,29 @@ data HoleResult o resultExpr = HoleResult
     , _holeResultPick :: o ()
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data HoleOption i o resultExpr = HoleOption
+data ValNames name = ValNames
+    { _valNamesGlobalDefs :: [name]
+    , _valNamesParams :: [name]
+    , _valNamesNominals :: [name]
+    , _valNamesTags :: [name]
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+instance Semigroup (ValNames name) where
+    ValNames x0 x1 x2 x3 <> ValNames y0 y1 y2 y3 =
+        ValNames (x0 <> y0) (x1 <> y1) (x2 <> y2) (x3 <> y3)
+
+instance Monoid (ValNames name) where
+    mempty = ValNames [] [] [] []
+
+data HoleOption name i o resultExpr = HoleOption
     { _hoVal :: Val ()
+    , _hoValNames :: i (ValNames name)
     , _hoSugaredBaseExpr :: i resultExpr
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult o resultExpr))
     } deriving (Functor, Generic)
 
-type HoleOption' m = HoleOption m m
+type HoleOption' name m = HoleOption name m m
 
 data Literal f
     = LiteralNum (f Double)
@@ -48,8 +64,8 @@ data Literal f
 type OptionLiteral i o resultExpr =
     Literal Identity -> i (HoleResultScore, i (HoleResult o resultExpr))
 
-data Hole i o resultExpr = Hole
-    { _holeOptions :: i [HoleOption i o resultExpr]
+data Hole name i o resultExpr = Hole
+    { _holeOptions :: i [HoleOption name i o resultExpr]
       -- TODO: Lifter from i to o?
     , _holeOptionLiteral :: OptionLiteral i o resultExpr
     , -- Changes the structure around the hole to remove the hole.
@@ -61,4 +77,5 @@ Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''HoleResultScore
+Lens.makeLenses ''ValNames
 Lens.makePrisms ''Literal

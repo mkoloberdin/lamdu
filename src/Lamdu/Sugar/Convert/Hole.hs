@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Hole
     , StorePoint, ResultVal, Preconversion, ResultGen
     , ResultProcessor(..)
     , mkOptions, detachValIfNeeded, sugar, loadNewDeps
-    , mkResult
+    , mkResult, extractValNames
     , mkOption, addWithoutDups
     , BaseExpr(..)
     ) where
@@ -16,11 +16,13 @@ import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Except (ExceptT(..), runExceptT)
 import           Control.Monad.Trans.State (StateT(..), mapStateT, evalState, state)
 import qualified Control.Monad.Trans.State as State
+import           Control.Monad.Transaction (MonadTransaction, getP)
 import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Binary as Binary
 import           Data.Bits (xor)
 import qualified Data.ByteString.Extended as BS
 import           Data.CurAndPrev (CurAndPrev(..))
+import           Data.Foldable (fold)
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
@@ -108,13 +110,43 @@ holeResultProcessor =
     , rpPreConversion = id
     }
 
+extractValNames :: MonadTransaction n m => Val a -> m (ValNames InternalName)
+extractValNames (Val _ body) =
+    (<>)
+    <$> (fold <$> traverse extractValNames body)
+    <*> selfNames
+    where
+        selfNames =
+            case body of
+            V.BLeaf V.LRecEmpty -> pure mempty
+            V.BLeaf V.LHole -> pure mempty
+            V.BLeaf (V.LVar var) -> storedTaggedName valNamesParams var
+            V.BLeaf V.LLiteral {} -> pure mempty
+            V.BLeaf V.LAbsurd {} -> pure mempty
+            V.BApp {} -> pure mempty
+            V.BLam (V.Lam param _) -> storedTaggedName valNamesParams param
+            V.BGetField (V.GetField _ tag) -> aTag tag
+            V.BInject (V.Inject tag _) -> aTag tag
+            V.BRecExtend (V.RecExtend tag _ _) -> aTag tag
+            V.BCase (V.Case tag _ _) -> aTag tag
+            V.BToNom (V.Nom nomId _) -> storedTaggedName valNamesNominals nomId
+            V.BFromNom (V.Nom nomId _) -> storedTaggedName valNamesNominals nomId
+        aTag tag = pure mempty { _valNamesTags = [nameWithoutContext tag] }
+        storedTaggedName l x =
+            Anchors.assocTag x & getP
+            <&> \tag ->
+            if tag == Anchors.anonTag
+            then mempty
+            else mempty & l .~ [nameWithContext x tag]
+
 mkOption ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a -> BaseExpr ->
-    HoleOption' (T m) (Expression InternalName (T m) (T m) ())
+    HoleOption' InternalName (T m) (Expression InternalName (T m) (T m) ())
 mkOption sugarContext resultProcessor exprPl val =
     HoleOption
     { _hoVal = baseExpr
+    , _hoValNames = extractValNames baseExpr
     , _hoSugaredBaseExpr = sugar sugarContext exprPl baseExpr
     , _hoResults = mkResults resultProcessor sugarContext exprPl val
     }
@@ -124,7 +156,7 @@ mkOption sugarContext resultProcessor exprPl val =
 mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a ->
-    [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
+    [HoleOption' InternalName (T m) (Expression InternalName (T m) (T m) ())]
 mkHoleSuggesteds sugarContext resultProcessor exprPl =
     exprPl ^. Input.inferred
     & Suggest.value
@@ -132,7 +164,7 @@ mkHoleSuggesteds sugarContext resultProcessor exprPl =
     <&> mkOption sugarContext resultProcessor exprPl
 
 addWithoutDups ::
-    [HoleOption i o a] -> [HoleOption i o a] -> [HoleOption i o a]
+    [HoleOption name i o a] -> [HoleOption name i o a] -> [HoleOption name i o a]
 addWithoutDups new old
     | null nonHoleNew = old
     | otherwise = nonHoleNew ++ filter (not . equivalentToNew) old
@@ -202,7 +234,7 @@ mkNominalOptions nominals =
 mkOptions ::
     Monad m =>
     ResultProcessor m -> Input.Payload m a ->
-    ConvertM m (T m [HoleOption' (T m) (Expression InternalName (T m) (T m) ())])
+    ConvertM m (T m [HoleOption' InternalName (T m) (Expression InternalName (T m) (T m) ())])
 mkOptions resultProcessor exprPl =
     Lens.view id
     <&>

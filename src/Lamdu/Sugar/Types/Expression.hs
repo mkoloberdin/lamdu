@@ -201,7 +201,7 @@ data Attach o
 data Fragment name i o expr = Fragment
     { _fExpr :: expr
     , _fAttach :: Attach o
-    , _fOptions :: i [HoleOption i o (Expression name i o ())]
+    , _fOptions :: i [HoleOption name i o (Expression name i o ())]
     } deriving (Functor, Foldable, Traversable, Generic)
 
 instance Show expr => Show (Fragment name i o expr) where
@@ -211,7 +211,7 @@ data Body name i o expr
     = BodyLam (Lambda name i o expr)
     | BodySimpleApply (V.Apply expr)
     | BodyLabeledApply (LabeledApply name i o expr)
-    | BodyHole (Hole i o (Expression name i o ()))
+    | BodyHole (Hole name i o (Expression name i o ()))
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o expr)
     | BodyGetField (GetField name i o expr)

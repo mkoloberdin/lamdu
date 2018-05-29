@@ -157,7 +157,7 @@ isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
     Monad i =>
-    [Sugar.HoleOption i o1 (ExpressionN i o1 ())] ->
+    [Sugar.HoleOption name i o1 (ExpressionN i o1 ())] ->
     Maybe (Sugar.OptionLiteral i o1 (ExpressionN i o1 ())) ->
     SearchMenu.ResultsContext ->
     ExprGuiM i o (Menu.OptionList (ResultGroup i o1))
@@ -187,7 +187,7 @@ mkGroupId option =
 
 mkGroup ::
     Monad i =>
-    Sugar.HoleOption i o (ExpressionN i o ()) ->
+    Sugar.HoleOption name i o (ExpressionN i o ()) ->
     i (Group i o)
 mkGroup option =
     option ^. Sugar.hoSugaredBaseExpr

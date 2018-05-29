@@ -137,15 +137,14 @@ workAreaExpressions f (WorkArea panes repl globals) =
     ?? globals
 
 holeOptionTransformExprs ::
-    Monad i => (a -> i b) -> HoleOption i o a -> HoleOption i o b
+    Monad i => (a -> i b) -> HoleOption name i o a -> HoleOption name i o b
 holeOptionTransformExprs onExpr option =
     option
     { _hoSugaredBaseExpr = option ^. hoSugaredBaseExpr >>= onExpr
     , _hoResults = option ^. hoResults <&> Lens._2 %~ (>>= holeResultConverted onExpr)
     }
 
-holeTransformExprs ::
-    Monad i => (a -> i b) -> Hole i o a -> Hole i o b
+holeTransformExprs :: Monad i => (a -> i b) -> Hole name i o a -> Hole name i o b
 holeTransformExprs onExpr hole =
     hole
     { _holeOptions = hole ^. holeOptions <&> traverse %~ holeOptionTransformExprs onExpr

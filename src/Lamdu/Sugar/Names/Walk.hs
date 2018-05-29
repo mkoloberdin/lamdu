@@ -286,15 +286,33 @@ toLabeledApply expr app@LabeledApply{..} =
     <*> traverse toRelayedArg _aRelayedArgs
     >>= traverse expr
 
+toValNames :: MonadNaming m => ValNames (OldName m) -> m (ValNames (NewName m))
+toValNames ValNames{..} =
+    (,,,)
+    <$> f GlobalDef _valNamesGlobalDefs
+    <*> f TaggedVar _valNamesParams
+    <*> f TaggedNominal _valNamesNominals
+    <*> f Tag _valNamesTags
+    <&> \(globals, params, nominals, tags) ->
+    ValNames
+    { _valNamesGlobalDefs = globals
+    , _valNamesParams = params
+    , _valNamesNominals = nominals
+    , _valNamesTags = tags
+    }
+    where
+        f nameType = traverse (opGetName Nothing nameType)
+
 toHole ::
     MonadNaming m =>
-    Hole (IM m) o (Expression (OldName m) (IM m) o ()) ->
-    m (Hole (IM m) o (Expression (NewName m) (IM m) o ()))
+    Hole (OldName m) (IM m) o (Expression (OldName m) (IM m) o ()) ->
+    m (Hole (NewName m) (IM m) o (Expression (NewName m) (IM m) o ()))
 toHole hole =
-    opRun
+    (,) <$> opRun <*> opRun
     <&>
-    \run ->
-    SugarLens.holeTransformExprs (run . toExpression) hole
+    \(run0, run1) ->
+    SugarLens.holeTransformExprs (run0 . toExpression) hole
+    & holeOptions . Lens.mapped . Lens.mapped . hoValNames %~ (>>= run1 . toValNames)
 
 toFragment ::
     MonadNaming m =>
@@ -303,12 +321,17 @@ toFragment ::
     m (Fragment (NewName m) (IM m) o b)
 toFragment expr Fragment{..} =
     do
-        run <- opRun
+        run0 <- opRun
+        run1 <- opRun
         newExpr <- expr _fExpr
         pure Fragment
             { _fExpr = newExpr
             , _fAttach = _fAttach
-            , _fOptions = _fOptions <&> Lens.mapped %~ SugarLens.holeOptionTransformExprs (run . toExpression)
+            , _fOptions =
+                _fOptions
+                <&> Lens.mapped %~
+                    SugarLens.holeOptionTransformExprs (run0 . toExpression)
+                <&> Lens.mapped %~ hoValNames %~ (>>= run1 . toValNames)
             }
 
 toComposite ::
