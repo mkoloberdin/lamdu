@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
-    ( expr
+    ( ofName, expr
     , allowedSearchTermCommon
     , allowedFragmentSearchTerm
     , getSearchStringRemainder
