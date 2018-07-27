@@ -85,12 +85,24 @@ testReorderLets =
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
 testExtract :: Test
 testExtract =
-    testSugarActions "extract-lambda-with-let.json" [(^?! action)]
-    & testCase "extract"
-    where
-        action =
-            replBody . _BodyLam . lamFunc . fBody . _Node . ann . plActions .
-            extract
+    testCase "extract-a-let-clause" $
+    testProgram "extract-lambda-with-let.json" $
+    \cache ->
+    do
+        workArea <- convertWorkArea cache
+        let funcBodyPl = workArea ^?! replBody . _BodyLam . lamFunc . fBody . _Node . ann
+        ExtractToLet extractDest <- funcBodyPl ^. plActions . extract
+        when (extractDest /= funcBodyPl ^. plEntityId)
+            (fail "unexpected extract destination")
+        newWorkArea <- convertWorkArea cache
+        let expectedNewPos =
+                newWorkArea ^?!
+                replBody . _BodyLam . lamFunc . fBody .
+                _Node . val . _BinderLet . lValue .
+                _Node . ann . plData . ExprGui.plHiddenEntityIds
+        when (elem extractDest expectedNewPos)
+            (fail "unexpected id for extract destination")
+        pure ()
 
 -- Test for issue #402
 -- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
