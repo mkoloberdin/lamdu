@@ -111,7 +111,6 @@ Library
                   , language-ecmascript >= 0.17 && < 0.18
                   , lens >= 4.1
                   , lens-aeson
-                  , leveldb-haskell >= 0.6
                   , List >= 0.5.1
                   , mtl >= 2.2
                   , nodejs-exec
@@ -120,6 +119,7 @@ Library
                   , pretty >=1.1.2 && <1.2
                   , process
                   , random >= 1.0.0
+                  , rocksdb-haskell
                   , safe-exceptions >= 0.1.4
                   , split
                   , StateVar

@@ -5,8 +5,8 @@ module Revision.Deltum.Db
 import qualified Data.ByteString.Extended as BS
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
-import           Database.LevelDB.Base (DB)
-import qualified Database.LevelDB.Base as DB
+import           Database.RocksDB.Base (DB)
+import qualified Database.RocksDB.Base as DB
 import           Revision.Deltum.Transaction (Store(..))
 import           System.Random (randomIO)
 
@@ -31,4 +31,9 @@ store db =
     }
 
 withDB :: FilePath -> DB.Options -> (Store IO -> IO a) -> IO a
-withDB path opts act = DB.withDB path opts (act . store)
+withDB path opts act =
+    do
+        db <- DB.open path opts
+        r <- act (store db)
+        DB.close db
+        pure r
