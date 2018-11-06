@@ -31,6 +31,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -56,9 +57,14 @@ make ::
 make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
+        let mRemoveNextHoles
+                | isSelected = ExprGui.plNearestHoles .~ NearestHoles.none
+                | otherwise = id
         config <- Lens.view Config.config
         fragmentExprGui <-
-            makeFragmentExprEdit fragment & GuiState.assignCursor myId innerId
+            fragment
+            & Sugar.fExpr . ann . Sugar.plData %~ mRemoveNextHoles
+            & makeFragmentExprEdit & GuiState.assignCursor myId innerId
         hover <- Hover.hover
         searchAreaGui <-
             SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl allowedFragmentSearchTerm

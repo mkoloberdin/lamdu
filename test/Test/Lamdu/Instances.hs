@@ -42,6 +42,7 @@ import           Lamdu.Precedence (HasPrecedence(..))
 import           Lamdu.Sugar.Annotations (ShowAnnotation)
 import           Lamdu.Sugar.Internal (InternalName(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.QuickCheck (Arbitrary(..), choose, getPositive, frequency)
@@ -294,6 +295,7 @@ instance NFData n => NFData (Sugar.Type n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.ValAnnotation n (T i)) where rnf = genericRnf
 instance NFData Name.Collision
 instance NFData Name.TagText
+instance NFData NearestHoles
 instance NFData ShowAnnotation
 instance NFData Sugar.BinderBodyScope where rnf = genericRnf
 instance NFData Sugar.BinderMode where rnf = genericRnf

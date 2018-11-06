@@ -40,7 +40,7 @@ make (Sugar.GetField recExpr tag) pl =
                 recExpr ^. ann . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap
         tagEdit <-
-            TagEdit.makeRecordTag tag
+            TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGui.plNearestHoles) tag
             <&> Lens.mapped %~ Widget.weakerEvents delEventMap
         stdWrapParentExpr pl
             ?? Options.box Options.disambiguationNone

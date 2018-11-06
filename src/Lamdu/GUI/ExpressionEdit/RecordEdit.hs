@@ -186,7 +186,7 @@ makeAddFieldRow addField pl =
         mkPickResult _ dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.fromEntityId dst
-            , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & Just
+            , Menu._pickNextEntryPoint = WidgetIds.fromEntityId dst
             }
 
 makeFieldRow ::
@@ -197,7 +197,7 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
         tagLabel <-
-            TagEdit.makeRecordTag tag
+            TagEdit.makeRecordTag (ExprGui.nextHolesBefore fieldExpr) tag
             <&> Align.tValue %~ Widget.weakerEvents itemEventMap
         hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr

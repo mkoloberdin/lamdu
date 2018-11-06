@@ -58,13 +58,14 @@ makeInject val tag pl =
 
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
-            ( TagEdit.makeVariantTag tag
+            ( TagEdit.makeVariantTag nearestHoles tag
                 <&> (/|/ colon)
                 <&> Lens.mapped %~ Widget.weakerEvents (foldMap replaceParentEventMap mReplaceParent)
                 <&> Responsive.fromWithTextPos
                 <&> (: [arg])
             )
     where
+        nearestHoles = ExprGui.nextHolesBefore val
         delDoc = E.Doc ["Edit", "Delete"]
         mReplaceParent = val ^. ann . Sugar.plActions . Sugar.mReplaceParent
 
@@ -88,7 +89,7 @@ makeNullaryInject nullary tag pl =
         stdWrapParentExpr pl <*>
         do
             dot <- injectIndicator "."
-            TagEdit.makeVariantTag tag <&> (/|/ dot)
+            TagEdit.makeVariantTag nearestHoles tag <&> (/|/ dot)
                 <&> Responsive.fromWithTextPos
                 <&> Widget.weakerEvents expandNullaryVal
     where
@@ -98,6 +99,7 @@ makeNullaryInject nullary tag pl =
         nullaryRecEntityId =
             nullary ^. ann . Sugar.plEntityId
             & WidgetIds.fromEntityId
+        nearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
 
 make ::
     (Monad i, Monad o) =>

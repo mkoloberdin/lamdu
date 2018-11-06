@@ -11,6 +11,7 @@ import qualified Tests.JsExport
 import qualified Tests.JsRtsTags
 import qualified Tests.Momentu
 import qualified Tests.Names
+import qualified Tests.NearestHoles
 import qualified Tests.Nix
 import qualified Tests.Precedence
 import qualified Tests.Readme
@@ -36,6 +37,7 @@ main =
             , Tests.JsRtsTags.test
             , Tests.Momentu.test
             , Tests.Names.test
+            , Tests.NearestHoles.test
             , Tests.Nix.test
             , Tests.Precedence.test
             , Tests.Readme.test

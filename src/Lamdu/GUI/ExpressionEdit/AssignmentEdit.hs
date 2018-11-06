@@ -38,6 +38,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Meta as Meta
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -52,6 +53,7 @@ import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.NearestHoles (NearestHoles(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -241,11 +243,11 @@ namedParamEditInfo widgetId actions nameEdit =
 
 makeParamsEdit ::
     (Monad i, Monad o) =>
-    Annotation.EvalAnnotationOptions ->
+    Annotation.EvalAnnotationOptions -> NearestHoles ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Name o) i o ->
     ExprGuiM i o [Gui Responsive o]
-makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
+makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.NullParam p ->
         do
@@ -269,9 +271,12 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                         x ^. Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
     where
         fromParamList delDestFirst delDestLast paramList =
-            withPrevNext delDestFirst delDestLast
-            (ParamEdit.iId . (^. Sugar.fpInfo)) paramList
-            & traverse mkParam <&> concat
+            do
+                jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
+                withPrevNext delDestFirst delDestLast
+                    (ParamEdit.iId . (^. Sugar.fpInfo)) paramList
+                    & traverse mkParam <&> concat
+                    <&> traverse . Widget.widget . Widget.eventMapMaker . Lens.mapped <>~ jumpHolesEventMap
             where
                 mkParam (prevId, nextId, param) = ParamEdit.make annotationOpts prevId nextId param
 
@@ -279,11 +284,11 @@ makeMParamsEdit ::
     (Monad i, Monad o) =>
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
-    Widget.Id ->
+    NearestHoles -> Widget.Id ->
     Sugar.AddFirstParam (Name o) i o ->
     Maybe (Sugar.BinderParams (Name o) i o) ->
     ExprGuiM i o (Maybe (Gui Responsive o))
-makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId addFirstParam mParams =
+makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHoles bodyId addFirstParam mParams =
     do
         isPrepend <- GuiState.isSubCursor ?? prependId
         prependParamEdits <-
@@ -298,7 +303,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
             case mParams of
             Nothing -> pure []
             Just params ->
-                makeParamsEdit annotationMode
+                makeParamsEdit annotationMode nearestHoles
                 delVarBackwardsId myId bodyId params
                 & ExprGuiM.withLocalMScopeId
                     ( mScopeCursor
@@ -353,6 +358,7 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
         do
             paramsEdit <-
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
+                (funcPl ^. Sugar.plData . ExprGui.plNearestHoles)
                 bodyId (func ^. Sugar.fAddFirstParam) (Just (func ^. Sugar.fParams))
             rhs <- ExprGuiM.makeBinder (func ^. Sugar.fBody)
             wrap <- stdWrap pl
@@ -381,7 +387,8 @@ makePlainParts ::
 makePlainParts assignPlain pl delVarBackwardsId =
     do
         mParamsEdit <-
-            makeMParamsEdit (pure Nothing) ScopeNavNotFocused delVarBackwardsId myId myId
+            makeMParamsEdit (pure Nothing) ScopeNavNotFocused delVarBackwardsId myId
+            (NearestHoles Nothing Nothing) myId
             (assignPlain ^. Sugar.apAddFirstParam) Nothing
         rhs <-
             assignPlain ^. Sugar.apBody & Ann pl
