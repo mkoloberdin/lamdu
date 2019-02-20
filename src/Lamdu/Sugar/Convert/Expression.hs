@@ -67,8 +67,8 @@ convert v =
       V.BGetField x -> ConvertGetField.convert x
       V.BInject x -> ConvertInject.convert x
       V.BToNom x -> ConvertNominal.convertToNom x
-      V.BFromNom x -> ConvertNominal.convertFromNom x
       V.BCase x -> ConvertCase.convert x
+      V.BLeaf (V.LFromNom x) -> ConvertNominal.convertFromNom x
       V.BLeaf (V.LVar x) -> ConvertGetVar.convert x
       V.BLeaf (V.LLiteral literal) ->
           case PrimVal.toKnown literal of

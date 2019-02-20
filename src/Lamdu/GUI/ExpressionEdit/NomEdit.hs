@@ -30,48 +30,37 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-mReplaceParent ::
-    Lens.Traversal'
-    (Sugar.Expression name i o (Sugar.Payload name i o a))
-    (o Sugar.EntityId)
-mReplaceParent = ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
-
 makeToNom ::
     (Monad i, Monad o) =>
-    Sugar.Nominal (Name o)
+    Sugar.ToNominal (Name o)
         (Tree
             (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
             (Sugar.Binder (Name o) i o)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
-makeToNom nom pl =
-    nom <&> ExprGuiM.makeBinder
-    & mkNomGui id "ToNominal" "«" mDel pl
+makeToNom (Sugar.ToNominal tid val) pl =
+    mkNomGui "ToNominal" "«" mDel tid [ExprGuiM.makeBinder val] pl
     where
         mDel =
-            nom ^. Sugar.nVal . ann . Sugar.plActions .
+            val ^. ann . Sugar.plActions .
             Sugar.mReplaceParent
-
 
 makeFromNom ::
     (Monad i, Monad o) =>
-    Sugar.Nominal (Name o) (ExprGui.SugarExpr i o) ->
+    Sugar.TId (Name o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
-makeFromNom nom pl =
-    nom <&> ExprGuiM.makeSubexpression
-    & mkNomGui reverse "FromNominal" "»" mDel pl
-    where
-        mDel = nom ^? Sugar.nVal . mReplaceParent
+makeFromNom nom =
+    mkNomGui "FromNominal" "»" Nothing nom []
 
 mkNomGui ::
     (Monad i, Monad o) =>
-    ([Gui Responsive o] -> [Gui Responsive o]) ->
     Text -> Text -> Maybe (o Sugar.EntityId) ->
+    Sugar.TId (Name o) ->
+    [ExprGuiM i o (Gui Responsive o)] ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Nominal (Name o) (ExprGuiM i o (Gui Responsive o)) ->
     ExprGuiM i o (Gui Responsive o)
-mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
+mkNomGui nomStr str mDel tid vals pl =
     do
         nomColor <- Lens.view (Theme.theme . Theme.textColors . TextColors.nomColor)
         config <- Lens.view Config.config
@@ -83,8 +72,9 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
         stdWrapParentExpr pl
             <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*>
-                    ( sequence
-                    [
+                    sequence
+                    (
+                    (
                         do
                             label <- Styled.grammarLabel str
                             nameGui <-
@@ -95,8 +85,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                         <&> Responsive.fromWithTextPos
                         & Reader.local (TextView.color .~ nomColor)
                         <&> Widget.weakerEvents eventMap
-                    , val
-                    ] <&> ordering
+                    ) : vals
                     )
                 )
     where

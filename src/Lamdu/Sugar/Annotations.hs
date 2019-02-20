@@ -118,7 +118,7 @@ markBodyAnnotations oldBody =
     BodyGetVar (GetBinder BinderVarRef { _bvForm = GetLet }) ->
         set neverShowAnnotations
     BodyFromNom _ -> set dontShowEval
-    BodyToNom (Nominal tid binder) ->
+    BodyToNom (ToNominal tid binder) ->
         ( showAnnotationWhenVerbose
             & showInEvalMode .~
                 ( tid ^. tidTId == Builtins.textTid

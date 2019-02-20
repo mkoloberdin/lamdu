@@ -11,7 +11,7 @@ module Lamdu.Sugar.Types.Simple
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cBody
-    , Nominal(..), nTId, nVal
+    , ToNominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
     , V.Apply(..), V.applyFunc, V.applyArg
@@ -60,7 +60,7 @@ data GetField name i o expr = GetField
     , _gfTag :: Tag name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Nominal name expr = Nominal
+data ToNominal name expr = ToNominal
     { _nTId :: TId name
     , _nVal :: expr
     } deriving (Functor, Foldable, Traversable, Generic)
@@ -70,5 +70,5 @@ Lens.makeLenses ''CaseArg
 Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeItem
 Lens.makeLenses ''GetField
-Lens.makeLenses ''Nominal
+Lens.makeLenses ''ToNominal
 Lens.makePrisms ''CaseKind

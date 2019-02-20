@@ -16,7 +16,7 @@ import qualified Data.Char as Char
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu -- TODO: this imports entire gui for a simple data type
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Formatting (Format(..))
@@ -87,10 +87,10 @@ ofBody =
     BodyGetVar GetParamsRecord {} -> ["Params"]
     BodyGetVar (GetParam x) -> ofName (x ^. pNameRef . nrName)
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
-    BodyToNom (Nominal tid b) ->
+    BodyToNom (ToNominal tid b) ->
         ofName (tid ^. tidName)
         ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . Lens.to ofBody
-    BodyFromNom (Nominal tid _) ->
+    BodyFromNom tid ->
         ofName (tid ^. tidName) <>
         -- The hole's "extra" apply-form results will be an
         -- IfElse, but we give val terms only to the base expr

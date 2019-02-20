@@ -132,13 +132,13 @@ loopExprBody parentPrec body_ =
     BodyLiteral      x -> result False (BodyLiteral x)
     BodyGetVar       x -> result False (BodyGetVar x)
     BodyHole         x -> result False (BodyHole x)
+    BodyFromNom      x -> result False (BodyFromNom x)
     BodyFragment     x -> mkUnambiguous fExpr BodyFragment x
     BodyRecord       x -> mkUnambiguous Lens.mapped BodyRecord x
     BodyCase         x -> mkUnambiguous Lens.mapped BodyCase x
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol Lens.mapped 0 BodyToNom x
     BodyInject       x -> inject x
-    BodyFromNom      x -> rightSymbol Lens.mapped 0 BodyFromNom x
     BodyGetField     x -> rightSymbol Lens.mapped 13 BodyGetField x
     BodySimpleApply  x -> simpleApply x
     BodyLabeledApply x -> labeledApply x
